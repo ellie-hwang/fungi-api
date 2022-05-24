@@ -1,6 +1,8 @@
 const express = require('express');
 const app = express();
 const pg = require('pg');
+const ClientError = require('./client-error');
+const errorMiddleware = require('./error-middleware');
 
 const db = new pg.Pool({
   connectionString: 'postgres://dev:dev@localhost/fungi',
@@ -22,6 +24,8 @@ app.get("/api/fungi", (req, res, next) => {
     })
     .catch(err => next(err));
 });
+
+app.use(errorMiddleware);
 
 app.listen(3000, () => {
   // eslint-disable-next-line no-console
