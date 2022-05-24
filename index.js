@@ -85,6 +85,25 @@ app.put("/api/fungi/imageUrl/:fungiId", (req, res, next) => {
     .catch(err => next(err));
 })
 
+app.delete("/api/fungi/:fungiId", (req, res, next) => {
+  const fungiId = Number(req.params.fungiId);
+  if (!fungiId || !Number.isInteger(fungiId)) {
+    throw new ClientError(400, 'fungiId must be a positive integer');
+  }
+  const sql = `delete from "fungi"
+              where "fungiId" = $1
+              returning *;`;
+  const params = [fungiId];
+  db.query(sql, params)
+    .then(result => {
+      if (!result.rows[0]) {
+        throw new ClientError(400, `There is no record of fungiId: ${fungiId}`);
+      }
+      const deletedFungi = result.rows;
+      res.sendStatus(204);
+    })
+    .catch(err => next(err));
+})
 app.use(errorMiddleware);
 
 app.listen(3000, () => {
