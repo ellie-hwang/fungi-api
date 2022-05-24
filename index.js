@@ -16,7 +16,7 @@ const jsonMiddleware = express.json();
 app.use(jsonMiddleware);
 
 app.get("/api/fungi", (req, res, next) => {
-  const sql = `select * from "fungi"`;
+  const sql = `select * from "fungi";`;
   db.query(sql)
     .then(result => {
       const fungi = result.rows;
@@ -25,6 +25,27 @@ app.get("/api/fungi", (req, res, next) => {
     .catch(err => next(err));
 });
 
+app.get("/api/fungi/:fungiId", (req, res, next) => {
+  const fungiId = Number(req.params.fungiId);
+  if (!fungiId || !Number.isInteger(fungiId)) {
+    throw new ClientError(400, 'fungiId must be a positive integer');
+  }
+  const sql = `select * from "fungi"
+              where "fungiId"=$1;`;
+  const params = [fungiId];
+  db.query(sql, params)
+    .then(result => {
+      console.log(result);
+      if (!result.rows[0]) {
+        throw new ClientError(400, `There is no record of fungiId: ${fungiId}`);
+      }
+      const fungi = result.rows;
+      res.status(201).json(fungi);
+    })
+    .catch(err => next(err));
+});
+
+
 app.post("/api/fungi", (req, res, next) => {
   const { name, family, species, edibility, season, imageUrl } = req.body;
   if (!name || !family || !species || !edibility || !season || !imageUrl) {
@@ -32,12 +53,34 @@ app.post("/api/fungi", (req, res, next) => {
   }
   const sql = `insert into "fungi" ("name", "family", "species", "edibility", "season", "imageUrl")
               values ($1, $2, $3, $4, $5, $6)
-              returning *;`
+              returning *;`;
   const params = [name, family, species, edibility, season, imageUrl];
   db.query(sql, params)
     .then(result => {
       const [newFungi] = result.rows;
       res.status(201).json(newFungi);
+    })
+    .catch(err => next(err));
+})
+
+app.put("/api/fungi/imageUrl/:fungiId", (req, res, next) => {
+  const fungiId = Number(req.params.fungiId);
+  if (!fungiId || !Number.isInteger(fungiId)) {
+    throw new ClientError(400, 'fungiId must be a positive integer');
+  }
+  const imageUrl = req.body.imageUrl;
+  const sql = `update "fungi"
+              set "imageUrl" = $1
+              where "fungiId" = $2
+              returning *;`;
+  const params = [imageUrl, fungiId];
+  db.query(sql, params)
+    .then(result => {
+      if (!result.rows[0]) {
+        throw new ClientError(400, `There is no record of fungiId: ${fungiId}`);
+      }
+      const [imageUrlUpdate] = result.rows;
+      res.status(200).json(imageUrlUpdate);
     })
     .catch(err => next(err));
 })
